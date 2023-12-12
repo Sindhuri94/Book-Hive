@@ -1,6 +1,7 @@
 const router = require("express")()
 const { BookModel } = require("../models/book")
 const { UserModel } = require("../models/user")
+const { BorrowDetailsModel } = require("../models/borrowDetails")
 
 const omitPassword = (user) => {
   const { password, ...rest } = user
@@ -32,7 +33,48 @@ router.post("/borrow", async (req, res, next) => {
     if (book.borrowedBy.includes(user.id)) {
       return res.status(400).json({ error: "You've already borrowed this book" })
     }
-    await book.update({ borrowedBy: [...book.borrowedBy, user.id] })
+    const newBorrowDetail = await BorrowDetailsModel.create({borrower: user.id, borrowedOn: new Date().toISOString(), borrowerName: user.username ,returnedOn: ""})
+    await book.update({borrowedBy2: [...book.borrowedBy2, newBorrowDetail ]})
+    const updatedBook = await BookModel.findById(book.id)
+    return res.status(200).json({
+      book: {
+        ...updatedBook.toJSON(),
+        availableQuantity: updatedBook.quantity - updatedBook.borrowedBy.length,
+      },
+    })
+  } catch (err) {
+    next(err)
+  }
+})
+
+router.post("/accept-borrow", async (req, res, next) => {
+  try {
+    const book = await BookModel.findOne({ isbn: req.body.isbn })
+    if (book == null) {
+      return res.status(404).json({ error: "Book not found" })
+    }
+    if (book.borrowedBy.length === book.quantity) {
+      return res.status(400).json({ error: "Book is not available" })
+    }
+    const user = await UserModel.findById(req.body.userId)
+    if (user == null) {
+      return res.status(404).json({ error: "User not found" })
+    }
+    if (book.borrowedBy.includes(user.id)) {
+      return res.status(400).json({ error: "This user already borrowed this book" })
+    }
+    await BookModel.findOneAndUpdate(
+      {
+        'borrowedBy2.borrower': user.id,
+        'borrowedBy2.status' : "requested"
+      },
+      {
+        $set: {
+          'borrowedBy2.$.status': "accepted",
+          'borrowedBy2.$.borrowedOn' : new Date().toISOString()
+        }
+     }
+    )
     const updatedBook = await BookModel.findById(book.id)
     return res.status(200).json({
       book: {
@@ -67,6 +109,19 @@ router.post("/return", async (req, res, next) => {
     await book.update({
       borrowedBy: book.borrowedBy.filter((borrowedBy) => !borrowedBy.equals(user.id)),
     })
+
+    await BookModel.findOneAndUpdate(
+      {
+        'borrowedBy2.borrower': user.id,
+        'borrowedBy2.returnedOn' : ""
+      },
+      {
+        $set: {
+          'borrowedBy2.$.returnedOn': new Date().toISOString()
+        }
+     }
+    )
+
     const updatedBook = await BookModel.findById(book.id)
     return res.status(200).json({
       book: {

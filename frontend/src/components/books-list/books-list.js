@@ -53,19 +53,26 @@ export const BooksList = () => {
         }
     }
 
+    const acceptBorrow = (isbn, userId) =>{
+        BackendApi.user.acceptBorrow(isbn, userId).then(({success})=>{
+            fetchBooks().catch(console.error)
+        })
+    }
+
     useEffect(() => {
         fetchBooks().catch(console.error)
         fetchUserBook().catch(console.error)
     }, [user])
 
     return (
-        
-        <div style={{width:'90%',margin:'auto'}}>
+
+        <div style={{ width: '90%', margin: 'auto' }}>
 
             <div className={`${classes.pageHeader} ${classes.mb2}`}>
-                <span style={{display:'flex', gap:'40px'}}>
-                <Typography variant="h5" style={{cursor:'pointer'}} color={activeTab=="book-list" ? 'blue': 'black'} onClick={()=>setActiveTab('book-list')}>Book List</Typography>
-                { user && !isAdmin && <Typography variant="h5" style={{cursor:'pointer'}} color={activeTab=="borrowed-books" ? 'blue': 'black'} onClick={()=>setActiveTab('borrowed-books')}>Borrowed Books</Typography>}
+                <span style={{ display: 'flex', gap: '40px' }}>
+                    <Typography variant="h5" style={{ cursor: 'pointer' }} color={activeTab == "book-list" ? 'blue' : 'black'} onClick={() => setActiveTab('book-list')}>Book List</Typography>
+                    {user && !isAdmin && <Typography variant="h5" style={{ cursor: 'pointer' }} color={activeTab == "borrowed-books" ? 'blue' : 'black'} onClick={() => setActiveTab('borrowed-books')}>Borrowed Books</Typography>}
+                    {user && isAdmin && <Typography variant="h5" style={{ cursor: 'pointer' }} color={activeTab == "borrow-requests" ? 'blue' : 'black'} onClick={() => setActiveTab('borrow-requests')}>Borrow Requests</Typography>}
                 </span>
                 {isAdmin && (
                     <Button variant="contained" color="primary" component={RouterLink} to="/admin/books/add">
@@ -73,54 +80,54 @@ export const BooksList = () => {
                     </Button>
                 )}
             </div>
-            { activeTab == "book-list" && (books.length > 0 ? (
+            {activeTab == "book-list" && (books.length > 0 ? (
                 <>
-                    <div style={{display: 'grid', gridTemplateColumns:'repeat(auto-fill, minmax(250px, 1fr))', columnGap:'20px'}}>
-                        {books.map((book) => 
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', columnGap: '20px' }}>
+                        {books.map((book) =>
                             <>
-                            <Container width="100px" height="100px" component={Paper} style={{margin:'10px', paddingBottom:'15px', minWidth:'250px', flexShrink:'0'}}>
-                                <div>
-                                    <p style={{fontSize:'20px', fontWeight:'bold'}}>{book.name}</p>
-                                    <p>ISBN: {book.isbn}</p>
-                                    <p>Quantity: {book.quantity}</p>
-                                    <p>Available: {book.availableQuantity}</p>
-                                    <p>Price: ${book.price}</p>
-                                    <div className={classes.actionsContainer}>
+                                <Container width="100px" height="100px" component={Paper} style={{ margin: '10px', paddingBottom: '15px', minWidth: '250px', flexShrink: '0' }}>
+                                    <div>
+                                        <p style={{ fontSize: '20px', fontWeight: 'bold' }}>{book.name}</p>
+                                        <p>ISBN: {book.isbn}</p>
+                                        <p>Quantity: {book.quantity}</p>
+                                        <p>Available: {book.availableQuantity}</p>
+                                        <p>Price: ${book.price}</p>
+                                        <div className={classes.actionsContainer}>
+                                            <Button
+                                                variant="contained"
+                                                component={RouterLink}
+                                                size="small"
+                                                to={`/books/${book.isbn}`}
+                                            >
+                                                View
+                                            </Button>
+                                            {isAdmin && (
+                                                <>
                                                     <Button
                                                         variant="contained"
+                                                        color="primary"
                                                         component={RouterLink}
                                                         size="small"
-                                                        to={`/books/${book.isbn}`}
+                                                        to={`/admin/books/${book.isbn}/edit`}
                                                     >
-                                                        View
+                                                        Edit
                                                     </Button>
-                                                    {isAdmin && (
-                                                        <>
-                                                            <Button
-                                                                variant="contained"
-                                                                color="primary"
-                                                                component={RouterLink}
-                                                                size="small"
-                                                                to={`/admin/books/${book.isbn}/edit`}
-                                                            >
-                                                                Edit
-                                                            </Button>
-                                                            <Button
-                                                                variant="contained"
-                                                                color="secondary"
-                                                                size="small"
-                                                                onClick={(e) => {
-                                                                    setActiveBookIsbn(book.isbn)
-                                                                    setOpenModal(true)
-                                                                }}
-                                                            >
-                                                                Delete
-                                                            </Button>
-                                                        </>
-                                                    )}
-                                                </div>
-                                </div>
-                            </Container>
+                                                    <Button
+                                                        variant="contained"
+                                                        color="secondary"
+                                                        size="small"
+                                                        onClick={(e) => {
+                                                            setActiveBookIsbn(book.isbn)
+                                                            setOpenModal(true)
+                                                        }}
+                                                    >
+                                                        Delete
+                                                    </Button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </Container>
                             </>
                         )}
                         <Modal open={openModal} onClose={(e) => setOpenModal(false)}>
@@ -145,38 +152,76 @@ export const BooksList = () => {
                 <Typography variant="h5">No books found!</Typography>
             ))}
 
+
+            {/* List of borrow requests shown to admin */}
+            {
+                user && isAdmin && activeTab == "borrow-requests" && books.length > 0 && (
+                    <>
+                        {
+                            books.map((book) => 
+                                (!book.borrowedBy.length>0 && book.borrowedBy2.some(borrowDetails => borrowDetails.status == 'requested'))?
+                                <Container width="100px" height="100px" component={Paper} style={{ margin: '10px', padding: '20px', minWidth: '250px', flexShrink: '0' }}>
+                                    <h1>{book.name}</h1>
+                                    <TableRow>
+                                        <TableCell>User Name</TableCell>
+                                        <TableCell>Requested On</TableCell>
+                                        <TableCell>Accept Request</TableCell>
+                                    </TableRow>
+                                    {
+                                        book.borrowedBy2.map((borrowDetails) =>
+                                            borrowDetails.status == 'requested' ?
+                                                <TableRow>
+                                                    <TableCell>{borrowDetails.borrowerName}</TableCell>
+                                                    <TableCell>{borrowDetails.borrowedOn}</TableCell>
+                                                    <TableCell><Button variant="contained" color="primary" onClick={acceptBorrow(book.isbn, borrowDetails.borrower)}>
+                                                        Permit Borrow
+                                                    </Button></TableCell>
+                                                </TableRow>
+                                                :
+                                                null
+                                        )
+                                    }
+                                </Container> : null
+
+                            )
+                        }
+                    </>
+                )
+            }
+
+            {/* List of borrowed books shown to customer */}
             {
                 user && !isAdmin && activeTab == "borrowed-books" && (
                     <>
                         {borrowedBook.length > 0 ? (
                             <>
-                                <div style={{display: 'grid',  gridTemplateColumns:'repeat(auto-fill, minmax(250px, 1fr))', columnGap:'20px'}}>
-                        {borrowedBook.map((book) => 
-                            <>
-                            <Container component={Paper} style={{margin:'10px', paddingBottom:'15px', width:'250px', flexShrink:'0'}}>
-                                <div>
-                                    <p style={{fontSize:'20px', fontWeight:'bold'}}>{book.name}</p>
-                                    <p>ISBN: {book.isbn}</p>
-                                    <p>Quantity: {book.quantity}</p>
-                                    <p>Available: {book.availableQuantity}</p>
-                                    <p>Price: ${book.price}</p>
-                                    <div className={classes.actionsContainer}>
-                                                    <Button
-                                                        variant="contained"
-                                                        component={RouterLink}
-                                                        size="small"
-                                                        to={`/books/${book.isbn}`}
-                                                    >
-                                                        View
-                                                    </Button>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', columnGap: '20px' }}>
+                                    {borrowedBook.map((book) =>
+                                        <>
+                                            <Container component={Paper} style={{ margin: '10px', paddingBottom: '15px', width: '250px', flexShrink: '0' }}>
+                                                <div>
+                                                    <p style={{ fontSize: '20px', fontWeight: 'bold' }}>{book.name}</p>
+                                                    <p>ISBN: {book.isbn}</p>
+                                                    <p>Quantity: {book.quantity}</p>
+                                                    <p>Available: {book.availableQuantity}</p>
+                                                    <p>Price: ${book.price}</p>
+                                                    <div className={classes.actionsContainer}>
+                                                        <Button
+                                                            variant="contained"
+                                                            component={RouterLink}
+                                                            size="small"
+                                                            to={`/books/${book.isbn}`}
+                                                        >
+                                                            View
+                                                        </Button>
+                                                    </div>
                                                 </div>
+                                            </Container>
+                                        </>
+                                    )}
                                 </div>
-                            </Container>
-                            </>
-                        )}
-                    </div>
 
-                                
+
                             </>
                         ) : (
                             <Typography variant="h5">No books issued!</Typography>
@@ -184,7 +229,10 @@ export const BooksList = () => {
                     </>
                 )
             }
+
+
+
         </div>
-   
+
     )
 }

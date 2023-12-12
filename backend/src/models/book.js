@@ -1,4 +1,5 @@
-const { model, Schema } = require("mongoose")
+const { model, Schema } = require("mongoose");
+const {BorrowDetailsModel} = require('./borrowDetails');
 
 const BookModel = model(
   "books",
@@ -9,6 +10,9 @@ const BookModel = model(
     price: { type: Number, required: true },
     quantity: { type: Number, required: true },
     borrowedBy: [{ type: Schema.Types.ObjectId, ref: "users" }],
+    borrowedBy2: [{
+      type: BorrowDetailsModel.schema, 
+      default:[] }],
     priceHistory: { type: Array, required: true, default: [] },
     quantityHistory: { type: Array, required: true, default: [] },
   })

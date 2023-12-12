@@ -14,6 +14,7 @@ import {
     TableBody,
     TableCell,
     TableRow,
+    TableHead,
 } from "@mui/material"
 import { NotificationManager } from "react-notifications"
 import { BackendApi } from "../../client/backend-api"
@@ -103,6 +104,7 @@ export const Book = () => {
                         <Tab label="Book Details" tabIndex={0} />
                         <Tab label="Price History" tabIndex={1} />
                         <Tab label="Quantity History" tabIndex={2} />
+                        <Tab label="Borrow History" tabIndex={3} />
                     </Tabs>
 
                     <TabPanel value={openTab} index={0}>
@@ -150,6 +152,30 @@ export const Book = () => {
                         </CardContent>
                     </TabPanel>
 
+                    <TabPanel value={openTab} index={3}>
+                        <CardContent>
+                            <Table>
+                                <TableHead>
+                                    <TableCell>Borrower</TableCell>
+                                    <TableCell>Borrowed On</TableCell>
+                                    <TableCell>Returned On</TableCell>
+                                </TableHead>
+                                <TableBody>
+                                    {book.borrowedBy2.map((borrowDetail) =>
+                                    (borrowDetail.status=='accepted') ?
+                                        <TableRow>                                            
+                                            <TableCell>{borrowDetail['borrowerName']}</TableCell>
+                                            <TableCell>{borrowDetail['borrowedOn']}</TableCell>
+                                            <TableCell>{borrowDetail['returnedOn']}</TableCell>
+                                        </TableRow>
+                                    :
+                                    null
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </TabPanel>
+
                     <TabPanel value={openTab} index={1}>
                         <CardContent>
                             {book && book.priceHistory.length > 0 ? (
@@ -186,9 +212,9 @@ export const Book = () => {
                                     <Button
                                         variant="contained"
                                         onClick={borrowBook}
-                                        disabled={book && user && book.borrowedBy.includes(user._id)}
+                                        disabled={book && user && (book.borrowedBy.includes(user._id) || book.borrowedBy2.some(borrowDetails => borrowDetails.borrower === user._id && borrowDetails.status == 'requested'))}
                                     >
-                                        Borrow
+                                        Request Borrow
                                     </Button>
                                     <Button
                                         variant="contained"
